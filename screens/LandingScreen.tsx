@@ -66,7 +66,7 @@ const LandingScreen: React.FC = () => {
       case 'Section 1':
         return (
           <View style={styles.containerSection}>
-            <Text style={styles.sectionTitle}>Bucket List of Yours</Text>
+            <Text style={styles.sectionTitle}>Bucket List of Your's</Text>
             <FlatList
               data={destinations}
               renderItem={({ item }) => (
