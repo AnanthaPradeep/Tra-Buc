@@ -71,9 +71,9 @@ const App = () => {
           <Stack.Screen name="FlightLandingScreen" component={FlightLandingScreen} options={{ headerShown: false }} />
           <Stack.Screen name="TrainLandingScreen" component={TrainLandingScreen} options={{ headerShown: false }} />
           <Stack.Screen name="StoriesScreen" component={StoriesScreen} />
-          <Stack.Screen name="UploadImage" component={UploadImage} />
-          <Stack.Screen name="ImageScreen" component={ImageScreen} />
-          <Stack.Screen name="ImageDetailScreen" component={ImageDetailScreen} />
+          <Stack.Screen name="UploadImage" component={UploadImage}  options={{ headerShown: false }}/>
+          <Stack.Screen name="ImageScreen" component={ImageScreen} options={{ headerShown: false }}/>
+          <Stack.Screen name="ImageDetailScreen" component={ImageDetailScreen}  options={{ headerShown: false }} />
           <Stack.Screen name="LoginScreen" component={LoginScreen}  options={{ headerShown: false }}/>
           <Stack.Screen name="SignUpScreen" component={SignUpScreen}  options={{ headerShown: false }} />
           <Stack.Screen name="OfferCard" component={OfferCard}  options={{ headerShown: false }}/>

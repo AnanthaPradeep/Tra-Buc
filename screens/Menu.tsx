@@ -202,7 +202,7 @@ const Menu = () => {
 };
 
 const styles = StyleSheet.create({
-  menuContainer: { flex: 1, paddingTop: 10, backgroundColor: '#fff' },
+  menuContainer: { flex: 1, paddingTop: 10, backgroundColor: '#008080' },
   container: {
     margin: 12,
     paddingHorizontal: 15,
