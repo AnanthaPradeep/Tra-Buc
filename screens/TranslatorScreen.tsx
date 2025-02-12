@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ImageBackground } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Voice from 'react-native-voice';
-import { Audio } from 'expo-av'; // For audio output
-import RNPickerSelect from 'react-native-picker-select'; // Import Picker
+import * as Speech from 'expo-speech'; // For text-to-speech
+import RNPickerSelect from 'react-native-picker-select';
+import axios from 'axios';
 
 const TranslatorScreen = () => {
   const [sourceText, setSourceText] = useState('');
@@ -11,71 +12,105 @@ const TranslatorScreen = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [sourceLanguage, setSourceLanguage] = useState('en');
   const [targetLanguage, setTargetLanguage] = useState('es');
-  const [hasPermission, setHasPermission] = useState(false);
-  const [sound, setSound] = useState<Audio.Sound | undefined>(undefined);
+  const [languageOptions, setLanguageOptions] = useState([]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const languageOptions = [
-    { label: 'English', value: 'en' },
-    { label: 'Spanish', value: 'es' },
-    { label: 'French', value: 'fr' },
-    { label: 'German', value: 'de' },
-    { label: 'Chinese', value: 'zh' },
-    { label: 'Hindi', value: 'hi' },
-    { label: 'Japanese', value: 'ja' },
-    { label: 'Russian', value: 'ru' },
-  ];
+  const GOOGLE_API_KEY = 'AIzaSyA2rBkC_iFyc_UJIO4KTlUQ9Pi7Grcnw70'; // 🔥 Replace with your API Key
 
-  // Voice Recognition
+  // Fetch supported languages from Google Cloud
   useEffect(() => {
-    Voice.onSpeechStart = () => setIsRecording(true);
-    Voice.onSpeechEnd = () => setIsRecording(false);
-
-    // Request microphone permission
-    const requestPermission = async () => {
+    const fetchLanguages = async () => {
       try {
-        const status = await Audio.requestPermissionsAsync();
-        setHasPermission(status.granted);
+        const response = await axios.get(
+          `https://translation.googleapis.com/language/translate/v2/languages?key=${GOOGLE_API_KEY}&target=en`
+        );
+
+        const languages = response.data.data.languages.map(lang => ({
+          label: lang.name,
+          value: lang.language,
+        }));
+        setLanguageOptions(languages);
       } catch (error) {
-        console.error('Permission Error', error);
+        console.error('Error fetching languages:', error);
+        Alert.alert('Error', 'Failed to load languages.');
       }
     };
-    requestPermission();
 
-    return () => {
-      Voice.destroy().then(Voice.removeAllListeners);
-    };
+    fetchLanguages();
   }, []);
 
-  const handleTranslate = () => {
-    setTranslatedText(`Translated version of: ${sourceText}`);
+  // Handle translation using Google Translate API
+  const handleTranslate = async () => {
+    if (!sourceText.trim()) {
+      Alert.alert('Error', 'Please enter text to translate.');
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `https://translation.googleapis.com/language/translate/v2?key=${GOOGLE_API_KEY}`,
+        {
+          q: sourceText,
+          source: sourceLanguage,
+          target: targetLanguage,
+          format: 'text',
+        }
+      );
+
+      const translatedText = response.data.data.translations[0].translatedText;
+      setTranslatedText(translatedText);
+
+      // Auto-play translated text
+      handleSpeak(translatedText, targetLanguage);
+    } catch (error) {
+      console.error('Translation error:', error);
+      Alert.alert('Error', 'Translation failed.');
+    }
+  };
+
+  // Start Speech-to-Text
+  const startListening = async () => {
+    setIsRecording(true);
+    Voice.onSpeechResults = (event) => {
+      if (event.value) {
+        setSourceText(event.value[0]); // Set recognized speech as input text
+        setIsRecording(false);
+      }
+    };
+
+    try {
+      await Voice.start(sourceLanguage); // Start listening in the selected language
+    } catch (error) {
+      console.error('Speech recognition error:', error);
+      setIsRecording(false);
+    }
+  };
+
+  // Stop Speech-to-Text
+  const stopListening = async () => {
+    try {
+      await Voice.stop();
+      setIsRecording(false);
+    } catch (error) {
+      console.error('Stop listening error:', error);
+    }
+  };
+
+  // Speak the translated text
+  const handleSpeak = (text, language) => {
+    if (!text) return;
+    Speech.speak(text, {
+      language: language,
+      pitch: 1.0,
+      rate: 1.0,
+      onStart: () => setIsSpeaking(true),
+      onDone: () => setIsSpeaking(false),
+    });
   };
 
   const handleClear = () => {
     setSourceText('');
     setTranslatedText('');
-  };
-
-  const toggleVoiceInput = () => {
-    if (isRecording) {
-      Voice.stop();
-    } else {
-      Voice.start(sourceLanguage); // start voice recognition for the selected source language
-    }
-  };
-
-  const toggleSpeaker = async () => {
-    if (translatedText) {
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: `https://translate.google.com/translate_tts?ie=UTF-8&tl=${targetLanguage}&q=${translatedText}` },
-        { shouldPlay: true }
-      );
-      setSound(sound);
-      sound.playAsync();
-    }
-  };
-
-  const handleCamera = () => {
-    Alert.alert('Camera functionality', 'Camera feature is yet to be implemented.');
   };
 
   const swapLanguages = () => {
@@ -87,36 +122,27 @@ const TranslatorScreen = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.settingsButton}>
-          <Icon name="menu" size={30} color="#333" />
+          <Icon name="menu" size={30} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.settingsButton}>
-          <Icon name="settings" size={30} color="#333" />
+          <Icon name="settings" size={30} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* Fixed Image Background Container */}
       <ImageBackground source={require('../assets/lr.png')} style={styles.backgroundImage}>
-        <View style={styles.backgroundContainer}>
-          {/* Background content */}
-        </View>
+        <View style={styles.backgroundContainer} />
       </ImageBackground>
 
-      {/* Scrollable Content */}
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        style={styles.scrollView} // Apply scroll styling
-      >
-        {/* Input and Language Selection Container */}
+      <ScrollView contentContainerStyle={styles.scrollContainer} style={styles.scrollView}>
         <View style={styles.whiteContainer}>
           <TextInput
             style={styles.textArea}
-            placeholder="Enter text to translate"
+            placeholder="Enter text or use the mic"
             value={sourceText}
             onChangeText={setSourceText}
             multiline
           />
 
-          {/* Language Selection */}
           <View style={styles.languageSelectionContainer}>
             <View style={styles.languagePickerContainer}>
               <RNPickerSelect
@@ -128,7 +154,7 @@ const TranslatorScreen = () => {
             </View>
 
             <TouchableOpacity style={styles.swapButton} onPress={swapLanguages}>
-              <Icon name="swap-horiz" size={30} color="#333" />
+              <Icon name="swap-horiz" size={30} color="#fff" />
             </TouchableOpacity>
 
             <View style={styles.languagePickerContainer}>
@@ -141,18 +167,25 @@ const TranslatorScreen = () => {
             </View>
           </View>
 
-          {/* Translated Text Box */}
           {translatedText ? (
             <TextInput
-              style={styles.textArea} // Same style as source text input
+              style={styles.textArea}
               value={translatedText}
-              editable={false} // Making it non-editable since it's the translated text
+              editable={false}
               multiline
             />
           ) : null}
         </View>
 
-        {/* Translate and Clear Buttons Container */}
+        <View style={styles.controlsContainer}>
+          <TouchableOpacity style={styles.iconButton} onPress={isRecording ? stopListening : startListening}>
+            <Icon name="mic" size={30} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconButton} onPress={() => handleSpeak(translatedText, targetLanguage)}>
+            <Icon name="volume-up" size={30} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.buttonsContainer}>
           <TouchableOpacity style={styles.translateButton} onPress={handleTranslate}>
             <Text style={styles.buttonText}>Translate</Text>
@@ -161,25 +194,7 @@ const TranslatorScreen = () => {
             <Text style={styles.buttonText}>Clear</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Bottom Icons (Mic, Speaker, Camera) */}
-        <View style={styles.controlsContainer}>
-          <TouchableOpacity style={styles.iconButton} onPress={toggleVoiceInput}>
-            <Icon name="mic" size={30} color="#333" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.iconButton} onPress={toggleSpeaker}>
-            <Icon name="volume-up" size={30} color="#333" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.iconButton} onPress={handleCamera}>
-            <Icon name="camera-alt" size={30} color="#333" />
-          </TouchableOpacity>
-        </View>
       </ScrollView>
-
-      {/* Fixed Footer */}
-      <View style={styles.footer} />
     </View>
   );
 };
@@ -193,6 +208,7 @@ const pickerStyles = {
   },
 };
 
+
 const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -201,7 +217,7 @@ const styles = StyleSheet.create({
     },
     backgroundImage: {
       width: '100%',
-      backgroundColor: 'rgba(8, 8, 8, 0.81)',
+      backgroundColor: 'rgb(0, 128, 128)',
       height: 180, // Adjust this height to your liking
       position: 'absolute',
       top: 60, // Below the header
@@ -216,7 +232,7 @@ const styles = StyleSheet.create({
     },
     header: {
       height: 60,
-      backgroundColor: 'rgb(0, 0, 0)',
+      backgroundColor: 'rgb(0, 128, 128)',
       width: '100%',
       position: 'absolute',
       top: 0,
@@ -229,12 +245,12 @@ const styles = StyleSheet.create({
     settingsButton: {
       padding: 8,
       color: 'rgb(255, 255, 255)',
-      backgroundColor: 'rgb(255, 255, 255)',
+      backgroundColor: 'rgb(0, 128, 128)',
       borderRadius:50
     },
     footer: {
       height: 60,
-      backgroundColor: 'rgb(0, 0, 0)',
+      backgroundColor: 'rgb(0, 128, 128)',
       width: '100%',
       position: 'absolute',
       bottom: 0,
@@ -250,7 +266,7 @@ const styles = StyleSheet.create({
       marginTop: 240, // Push content below the header and background image
     },
     whiteContainer: {
-      backgroundColor: 'rgba(255, 255, 255, 0.58)',
+      backgroundColor: 'rgba(0, 128, 128, 0.54)',
       borderRadius: 10,
       borderColor: '#000',
       borderWidth: 2,
@@ -268,11 +284,12 @@ const styles = StyleSheet.create({
       justifyContent: 'space-between',
     },
     languagePickerContainer: {
-      borderColor: '#000',
+      borderColor: 'rgb(0, 128, 128)',
       borderWidth: 2,
       borderRadius: 10,
       flex: 1,
-      backgroundColor: '#fff',
+      color: 'rgba(0, 128, 128, 0.54)',
+      backgroundColor: 'rgb(255, 255, 255)',
     },
     swapButton: {
       justifyContent: 'center',
@@ -281,7 +298,7 @@ const styles = StyleSheet.create({
     },
     textArea: {
       borderRadius: 8,
-      borderColor: '#000',
+      borderColor: 'rgb(0, 128, 128)',
       borderWidth: 2,
       padding: 16,
       marginBottom: 20,
@@ -299,7 +316,7 @@ const styles = StyleSheet.create({
       paddingHorizontal: 20,
     },
     translateButton: {
-      backgroundColor: '#000',
+      backgroundColor: 'rgb(0, 128, 128)',
       paddingVertical: 16,
       paddingHorizontal: 20,
       borderRadius: 8,
@@ -308,7 +325,7 @@ const styles = StyleSheet.create({
       alignItems: 'center',
     },
     clearButton: {
-      backgroundColor: '#000',
+      backgroundColor: '#rgb(0, 128, 128)',
       paddingVertical: 16,
       paddingHorizontal: 20,
       borderRadius: 8,
@@ -330,12 +347,10 @@ const styles = StyleSheet.create({
     },
     iconButton: {
       padding: 16,
-      backgroundColor: '#fff',
+      backgroundColor: 'rgb(0, 128, 128)',
       borderRadius: 50,
-      borderColor: '#333',
+      borderColor: '#fff',
       borderWidth: 1,
     },
   });
-  
-  export default TranslatorScreen;
-  
+export default TranslatorScreen;

@@ -6,25 +6,54 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { RootStackParamList } from '../types';
 
-type LanguageScreenNavigationProp = StackNavigationProp<RootStackParamList, 'LanguageScreen'>;
+const API_KEY = 'AIzaSyDFypYeDefhX4wCLW4L-ahsQQWxm1CrSm4';
 
 const LanguageScreen: React.FC = () => {
-  const navigation = useNavigation<LanguageScreenNavigationProp>();
-  const [languages, setLanguages] = useState<string[]>(['English', 'Spanish', 'French', 'German']);
-  const [regions, setRegions] = useState<any[]>([
-    { name: 'North America', flag: '🌎' },
-    { name: 'Europe', flag: '🌍' },
-    { name: 'Asia', flag: '🌏' },
-    { name: 'Africa', flag: '🌍' }
-  ]);
-  const [currencies, setCurrencies] = useState<string[]>(['USD', 'EUR', 'GBP', 'INR']);
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList, 'LanguageScreen'>>();
+  const [languages, setLanguages] = useState<string[]>([]);
+  const [regions, setRegions] = useState<any[]>([]);
+  const [currencies, setCurrencies] = useState<string[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<string>(''); 
   const [selectedRegion, setSelectedRegion] = useState<string>(''); 
   const [selectedCurrency, setSelectedCurrency] = useState<string>(''); 
 
   useEffect(() => {
     navigation.setOptions({ headerShown: false });
+  
+    // Fetch available languages from Google API
+    fetch(`https://translation.googleapis.com/language/translate/v2/languages?key=${API_KEY}&target=en`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.data && data.data.languages) {
+          setLanguages(data.data.languages.map((lang: { name: string }) => lang.name));
+        }
+      })
+      .catch(error => console.error('Error fetching languages:', error));
+  
+    // Fetch regions from API
+    fetch('https://restcountries.com/v3.1/all')
+      .then(response => response.json())
+      .then(data => {
+        const uniqueRegions = new Set(data.map((country: any) => country.region).filter(Boolean));
+        setRegions(Array.from(uniqueRegions).map(region => ({ name: region })));
+      })
+      .catch(error => console.error('Error fetching regions:', error));
+  
+    // Fetch currency data
+    fetch('https://restcountries.com/v3.1/all')
+      .then(response => response.json())
+      .then(data => {
+        const currencyList = new Set<string>();
+        data.forEach((country: any) => {
+          if (country.currencies) {
+            Object.keys(country.currencies).forEach(curr => currencyList.add(curr));
+          }
+        });
+        setCurrencies(Array.from(currencyList));
+      })
+      .catch(error => console.error('Error fetching currencies:', error));
   }, [navigation]);
+  
 
   return (
     <ImageBackground source={require('../assets/backgrounds/bg22.jpg')} style={styles.backgroundImage}>
@@ -88,7 +117,6 @@ const LanguageScreen: React.FC = () => {
     </ImageBackground>
   );
 };
-
 const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
