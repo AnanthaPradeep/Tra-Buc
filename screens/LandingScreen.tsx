@@ -118,7 +118,7 @@ const LandingScreen: React.FC = () => {
       case 'Section 3':
         return (
           <View style={styles.containerSection}>
-            <Text style={styles.sectionTitle}>Next Destination of Yours</Text>
+            <Text style={styles.sectionTitle}>Next Destination of Your's</Text>
             <FlatList
               data={destinations}
               renderItem={renderPopularDestination}

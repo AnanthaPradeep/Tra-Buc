@@ -20,6 +20,7 @@
         android:allowBackup="true"
         android:debuggable="true"
         android:hardwareAccelerated="true">
+        <service android:name="com.wenkesj.voice.VoiceModule" />
 
         <activity
             android:name=".MainActivity"

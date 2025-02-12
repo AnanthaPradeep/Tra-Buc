@@ -21,15 +21,17 @@ const HomeScreen: React.FC = () => {
         setHasNavigated(true);
         navigation.navigate('LanguageScreen');
       }
-    }, 2008080); // Show loading for 2 seconds
-
+    }, 2000); // 2 seconds
+  
     return () => clearTimeout(timer);
   }, [hasNavigated, navigation, setHasNavigated]);
+  
+  
 
   return (
     <Layout>
       <View style={styles.container}>
-        <ImageBackground source={require('../assets/backgrounds/bg13.png')} style={styles.backgroundImage} resizeMode="cover">
+        <ImageBackground source={require('../assets/backgrounds/bg14.png')} style={styles.backgroundImage} resizeMode="cover">
           <View style={styles.overlay} />
           
           {/* Centered Logo */}
