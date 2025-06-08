@@ -6,7 +6,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { RootStackParamList } from '../types';
 
-const API_KEY = 'AIzaSyDFypYeDefhX4wCLW4L-ahsQQWxm1CrSm4';
+const API_KEY = 'AIzaSy';
 
 const LanguageScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList, 'LanguageScreen'>>();
